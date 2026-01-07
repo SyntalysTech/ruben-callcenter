@@ -56,7 +56,7 @@ export function Sidebar() {
         .from('user_profiles')
         .select('role')
         .eq('id', user.id)
-        .single();
+        .single() as { data: { role: string } | null };
       if (data) {
         setUserRole(data.role as UserRole);
       }
