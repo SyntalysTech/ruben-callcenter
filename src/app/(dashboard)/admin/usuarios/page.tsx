@@ -34,7 +34,7 @@ export default function UsuariosPage() {
         .from('user_profiles')
         .select('role')
         .eq('id', user.id)
-        .single();
+        .single() as { data: { role: string } | null };
       if (data) {
         setCurrentUserRole(data.role as UserRole);
       }
@@ -46,7 +46,7 @@ export default function UsuariosPage() {
     const { data, error } = await supabase
       .from('user_profiles')
       .select('*')
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false }) as { data: UserProfile[] | null; error: unknown };
 
     if (error) {
       console.error('Error loading users:', error);
