@@ -1,5 +1,35 @@
 export type LeadStatus = 'red' | 'yellow' | 'orange' | 'blue' | 'green';
 
+export type UserRole = 'admin' | 'manager' | 'agent';
+
+export const ROLE_CONFIG: Record<UserRole, { label: string; color: string; bgColor: string }> = {
+  admin: {
+    label: 'Administrador',
+    color: 'text-white',
+    bgColor: 'bg-purple-600',
+  },
+  manager: {
+    label: 'Manager',
+    color: 'text-white',
+    bgColor: 'bg-blue-600',
+  },
+  agent: {
+    label: 'Agente',
+    color: 'text-white',
+    bgColor: 'bg-gray-600',
+  },
+};
+
+export interface UserProfile {
+  id: string;
+  created_at: string;
+  updated_at: string;
+  email: string;
+  full_name: string;
+  role: UserRole;
+  is_active: boolean;
+}
+
 export const STATUS_CONFIG: Record<LeadStatus, { label: string; color: string; bgColor: string }> = {
   red: {
     label: 'No es posible hacerle el contrato',
@@ -123,6 +153,11 @@ export interface Database {
         Row: CallMetricsDaily;
         Insert: CallMetricsDaily;
         Update: Partial<CallMetricsDaily>;
+      };
+      user_profiles: {
+        Row: UserProfile;
+        Insert: Omit<UserProfile, 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Omit<UserProfile, 'id' | 'created_at' | 'updated_at'>>;
       };
     };
   };

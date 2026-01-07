@@ -8,6 +8,22 @@
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- ============================================
+-- TABLA: user_profiles (perfiles de usuario con roles)
+-- ============================================
+CREATE TABLE IF NOT EXISTS user_profiles (
+  id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  email TEXT NOT NULL,
+  full_name TEXT NOT NULL,
+  role TEXT NOT NULL DEFAULT 'agent' CHECK (role IN ('admin', 'manager', 'agent')),
+  is_active BOOLEAN DEFAULT true
+);
+
+CREATE INDEX IF NOT EXISTS idx_user_profiles_email ON user_profiles(email);
+CREATE INDEX IF NOT EXISTS idx_user_profiles_role ON user_profiles(role);
+
+-- ============================================
 -- TABLA: leads
 -- ============================================
 CREATE TABLE IF NOT EXISTS leads (
@@ -44,6 +60,34 @@ CREATE TRIGGER update_leads_updated_at
   BEFORE UPDATE ON leads
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_user_profiles_updated_at ON user_profiles;
+CREATE TRIGGER update_user_profiles_updated_at
+  BEFORE UPDATE ON user_profiles
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
+
+-- Función para crear perfil automáticamente al registrar usuario
+CREATE OR REPLACE FUNCTION handle_new_user()
+RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO public.user_profiles (id, email, full_name, role)
+  VALUES (
+    NEW.id,
+    NEW.email,
+    COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.email),
+    COALESCE(NEW.raw_user_meta_data->>'role', 'agent')
+  );
+  RETURN NEW;
+END;
+$$ language 'plpgsql' SECURITY DEFINER;
+
+-- Trigger para crear perfil automáticamente
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW
+  EXECUTE FUNCTION handle_new_user();
 
 -- ============================================
 -- TABLA: lead_notes (historial de notas)
@@ -116,12 +160,32 @@ CREATE TABLE IF NOT EXISTS call_metrics_daily (
 -- ============================================
 
 -- Habilitar RLS
+ALTER TABLE user_profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE leads ENABLE ROW LEVEL SECURITY;
 ALTER TABLE lead_notes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE call_accounts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE call_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE call_recordings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE call_metrics_daily ENABLE ROW LEVEL SECURITY;
+
+-- Políticas para user_profiles
+CREATE POLICY "Usuarios pueden ver su propio perfil" ON user_profiles
+  FOR SELECT TO authenticated USING (true);
+
+CREATE POLICY "Admins pueden actualizar perfiles" ON user_profiles
+  FOR UPDATE TO authenticated USING (
+    EXISTS (SELECT 1 FROM user_profiles WHERE id = auth.uid() AND role = 'admin')
+  );
+
+CREATE POLICY "Admins pueden insertar perfiles" ON user_profiles
+  FOR INSERT TO authenticated WITH CHECK (
+    EXISTS (SELECT 1 FROM user_profiles WHERE id = auth.uid() AND role = 'admin')
+  );
+
+CREATE POLICY "Admins pueden eliminar perfiles" ON user_profiles
+  FOR DELETE TO authenticated USING (
+    EXISTS (SELECT 1 FROM user_profiles WHERE id = auth.uid() AND role = 'admin')
+  );
 
 -- Políticas para leads (usuarios autenticados pueden ver/editar todo)
 CREATE POLICY "Usuarios autenticados pueden ver leads" ON leads
@@ -161,13 +225,3 @@ CREATE POLICY "Usuarios autenticados pueden ver grabaciones" ON call_recordings
 -- Políticas para call_metrics_daily (solo lectura)
 CREATE POLICY "Usuarios autenticados pueden ver métricas" ON call_metrics_daily
   FOR SELECT TO authenticated USING (true);
-
--- ============================================
--- DATOS DE EJEMPLO (opcional, para testing)
--- ============================================
--- INSERT INTO leads (full_name, email, phone, status, notes) VALUES
---   ('Juan García López', 'juan@example.com', '+34612345678', 'green', 'Cliente interesado en tarifa solar'),
---   ('María Rodríguez', 'maria@example.com', '+34623456789', 'yellow', 'Pendiente de llamar'),
---   ('Carlos Martínez', 'carlos@example.com', '+34634567890', 'orange', 'Llamar la próxima semana'),
---   ('Ana Fernández', 'ana@example.com', '+34645678901', 'blue', 'Cita programada para viernes'),
---   ('Pedro Sánchez', 'pedro@example.com', '+34656789012', 'red', 'No cumple requisitos');
