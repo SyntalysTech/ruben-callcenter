@@ -84,7 +84,7 @@ export default function UsuariosPage() {
           .update({
             full_name: formData.full_name,
             role: formData.role
-          })
+          } as never)
           .eq('id', authData.user.id);
       }
 
@@ -101,7 +101,7 @@ export default function UsuariosPage() {
   const handleUpdateRole = async (userId: string, newRole: UserRole) => {
     const { error } = await supabase
       .from('user_profiles')
-      .update({ role: newRole })
+      .update({ role: newRole } as never)
       .eq('id', userId);
 
     if (error) {
@@ -115,7 +115,7 @@ export default function UsuariosPage() {
   const handleToggleActive = async (userId: string, isActive: boolean) => {
     const { error } = await supabase
       .from('user_profiles')
-      .update({ is_active: !isActive })
+      .update({ is_active: !isActive } as never)
       .eq('id', userId);
 
     if (error) {
@@ -145,7 +145,7 @@ export default function UsuariosPage() {
   const isAdmin = currentUserRole === 'admin';
 
   return (
-    <div className="space-y-6">
+    <div className="p-8 space-y-6">
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
