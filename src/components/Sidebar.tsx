@@ -100,7 +100,7 @@ export function Sidebar() {
 
   return (
     <aside
-      className={`bg-brand-primary min-h-screen flex flex-col transition-all duration-300 ease-in-out ${
+      className={`bg-brand-primary h-screen sticky top-0 flex flex-col transition-all duration-300 ease-in-out ${
         collapsed ? 'w-16' : 'w-52'
       }`}
     >
