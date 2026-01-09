@@ -319,6 +319,155 @@ export interface Referral {
   notes: string | null;
 }
 
+// ============ WHATSAPP ============
+
+export interface WhatsAppConfig {
+  id: string;
+  created_at: string;
+  updated_at: string;
+  phone_number_id: string;
+  business_account_id: string;
+  access_token: string;
+  webhook_verify_token: string;
+  display_phone_number: string;
+  verified_name: string | null;
+  is_active: boolean;
+  last_sync_at: string | null;
+  daily_messages_limit: number;
+  daily_messages_sent: number;
+  limit_reset_at: string;
+}
+
+export type WhatsAppTemplateStatus = 'draft' | 'pending' | 'approved' | 'rejected' | 'disabled';
+export type WhatsAppTemplateCategory = 'AUTHENTICATION' | 'MARKETING' | 'UTILITY';
+
+export interface WhatsAppTemplate {
+  id: string;
+  created_at: string;
+  updated_at: string;
+  template_id: string | null;
+  name: string;
+  language: string;
+  status: WhatsAppTemplateStatus;
+  rejection_reason: string | null;
+  category: WhatsAppTemplateCategory;
+  header_type: 'TEXT' | 'IMAGE' | 'VIDEO' | 'DOCUMENT' | null;
+  header_content: string | null;
+  body_text: string;
+  footer_text: string | null;
+  buttons: unknown[] | null;
+  example_values: unknown | null;
+  description: string | null;
+  use_case: string | null;
+}
+
+export type WhatsAppConversationStatus = 'open' | 'pending' | 'resolved' | 'spam';
+
+export interface WhatsAppConversation {
+  id: string;
+  created_at: string;
+  updated_at: string;
+  phone_number: string;
+  contact_name: string | null;
+  lead_id: string | null;
+  client_id: string | null;
+  status: WhatsAppConversationStatus;
+  last_customer_message_at: string | null;
+  can_send_template_only: boolean;
+  assigned_to: string | null;
+  unread_count: number;
+  total_messages: number;
+  last_message_text: string | null;
+  last_message_at: string | null;
+  last_message_direction: 'inbound' | 'outbound' | null;
+  labels: string[] | null;
+}
+
+export type WhatsAppMessageType =
+  | 'text' | 'image' | 'video' | 'audio' | 'document'
+  | 'sticker' | 'location' | 'contacts' | 'template'
+  | 'interactive' | 'reaction' | 'unknown';
+
+export type WhatsAppMessageStatus = 'pending' | 'sent' | 'delivered' | 'read' | 'failed';
+
+export interface WhatsAppMessage {
+  id: string;
+  created_at: string;
+  conversation_id: string;
+  wamid: string | null;
+  direction: 'inbound' | 'outbound';
+  message_type: WhatsAppMessageType;
+  content: {
+    body?: string;
+    url?: string;
+    caption?: string;
+    mime_type?: string;
+    template_name?: string;
+    parameters?: unknown[];
+    latitude?: number;
+    longitude?: number;
+    name?: string;
+  };
+  status: WhatsAppMessageStatus;
+  error_code: string | null;
+  error_message: string | null;
+  sent_at: string | null;
+  delivered_at: string | null;
+  read_at: string | null;
+  context_message_id: string | null;
+  forwarded: boolean;
+  sent_by: string | null;
+}
+
+export interface WhatsAppQuickReply {
+  id: string;
+  created_at: string;
+  title: string;
+  message: string;
+  category: string | null;
+  use_count: number;
+  last_used_at: string | null;
+  sort_order: number;
+  is_active: boolean;
+  created_by: string | null;
+}
+
+export type WhatsAppBroadcastStatus = 'draft' | 'scheduled' | 'sending' | 'completed' | 'cancelled' | 'failed';
+
+export interface WhatsAppBroadcast {
+  id: string;
+  created_at: string;
+  name: string;
+  description: string | null;
+  template_id: string | null;
+  recipient_filter: unknown | null;
+  recipient_count: number;
+  status: WhatsAppBroadcastStatus;
+  scheduled_at: string | null;
+  started_at: string | null;
+  completed_at: string | null;
+  sent_count: number;
+  delivered_count: number;
+  read_count: number;
+  failed_count: number;
+  created_by: string | null;
+}
+
+export const WHATSAPP_MESSAGE_STATUS_CONFIG: Record<WhatsAppMessageStatus, { label: string; icon: string; color: string }> = {
+  pending: { label: 'Enviando', icon: 'clock', color: 'text-gray-400' },
+  sent: { label: 'Enviado', icon: 'check', color: 'text-gray-400' },
+  delivered: { label: 'Entregado', icon: 'check-check', color: 'text-gray-400' },
+  read: { label: 'Leído', icon: 'check-check', color: 'text-blue-500' },
+  failed: { label: 'Error', icon: 'x', color: 'text-red-500' },
+};
+
+export const WHATSAPP_CONVERSATION_STATUS_CONFIG: Record<WhatsAppConversationStatus, { label: string; color: string; bgColor: string }> = {
+  open: { label: 'Abierta', color: 'text-green-700', bgColor: 'bg-green-100' },
+  pending: { label: 'Pendiente', color: 'text-yellow-700', bgColor: 'bg-yellow-100' },
+  resolved: { label: 'Resuelta', color: 'text-gray-700', bgColor: 'bg-gray-100' },
+  spam: { label: 'Spam', color: 'text-red-700', bgColor: 'bg-red-100' },
+};
+
 export interface Database {
   public: {
     Tables: {

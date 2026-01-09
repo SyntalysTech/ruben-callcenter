@@ -22,6 +22,9 @@ import {
   UserCheck,
   Bell,
   Gift,
+  MessageCircle,
+  Send,
+  FileText,
 } from 'lucide-react';
 
 const mainNavItems = [
@@ -34,6 +37,12 @@ const mainNavItems = [
 const energyItems = [
   { href: '/estudios', label: 'Estudios', icon: Zap },
   { href: '/referidos', label: 'Referidos', icon: Gift },
+];
+
+const whatsappItems = [
+  { href: '/whatsapp', label: 'Conversaciones', icon: MessageCircle },
+  { href: '/whatsapp/envios', label: 'Envios masivos', icon: Send },
+  { href: '/whatsapp/plantillas', label: 'Plantillas', icon: FileText },
 ];
 
 const callCenterItems = [
@@ -171,6 +180,40 @@ export function Sidebar() {
                   title={collapsed ? item.label : undefined}
                 >
                   <item.icon size={18} className="flex-shrink-0" />
+                  {!collapsed && <span>{item.label}</span>}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        {/* Divider */}
+        <div className="h-px bg-white/10 mx-1 mb-4" />
+
+        {/* WhatsApp Section */}
+        <div className="mb-4">
+          {!collapsed && (
+            <div className="flex items-center gap-1.5 px-2 mb-1.5">
+              <MessageCircle size={12} className="text-brand-text/50" />
+              <p className="text-[10px] font-semibold text-brand-text/50 uppercase tracking-wider">
+                WhatsApp
+              </p>
+              <span className="text-[10px] bg-yellow-500 text-black px-1.5 py-0.5 rounded-full">
+                Pronto
+              </span>
+            </div>
+          )}
+          <ul className="space-y-0.5">
+            {whatsappItems.map((item) => (
+              <li key={item.href}>
+                <Link
+                  href={item.href}
+                  className={`flex items-center py-1.5 rounded-lg transition-all duration-200 text-brand-text/50 cursor-not-allowed text-sm ${
+                    collapsed ? 'justify-center px-2' : 'gap-2.5 px-2.5'
+                  }`}
+                  title={collapsed ? item.label : undefined}
+                >
+                  <item.icon size={16} className="flex-shrink-0" />
                   {!collapsed && <span>{item.label}</span>}
                 </Link>
               </li>
