@@ -4,8 +4,42 @@ import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import { ChevronDown } from 'lucide-react';
+import confetti from 'canvas-confetti';
 import { updateLeadStatus } from '@/lib/api';
 import { STATUS_CONFIG, type LeadStatus } from '@/lib/types';
+
+// Confetti celebration for converted leads
+const triggerConfetti = () => {
+  // First burst
+  confetti({
+    particleCount: 100,
+    spread: 70,
+    origin: { y: 0.6 },
+    colors: ['#10B981', '#34D399', '#6EE7B7', '#A7F3D0', '#D1FAE5'],
+  });
+
+  // Second burst after 150ms
+  setTimeout(() => {
+    confetti({
+      particleCount: 50,
+      angle: 60,
+      spread: 55,
+      origin: { x: 0 },
+      colors: ['#10B981', '#34D399', '#6EE7B7'],
+    });
+  }, 150);
+
+  // Third burst after 300ms
+  setTimeout(() => {
+    confetti({
+      particleCount: 50,
+      angle: 120,
+      spread: 55,
+      origin: { x: 1 },
+      colors: ['#10B981', '#34D399', '#6EE7B7'],
+    });
+  }, 300);
+};
 
 interface Props {
   leadId: string;
@@ -55,6 +89,10 @@ export function StatusSelect({ leadId, currentStatus }: Props) {
     const { error } = await updateLeadStatus(leadId, newStatus);
 
     if (!error) {
+      // Celebrate when lead is converted to green (signed)!
+      if (newStatus === 'green') {
+        triggerConfetti();
+      }
       router.refresh();
     }
     setUpdating(false);

@@ -2,8 +2,37 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import confetti from 'canvas-confetti';
 import { updateLead } from '@/lib/api';
 import { STATUS_CONFIG, type Lead, type LeadStatus } from '@/lib/types';
+
+// Confetti celebration for converted leads
+const triggerConfetti = () => {
+  confetti({
+    particleCount: 100,
+    spread: 70,
+    origin: { y: 0.6 },
+    colors: ['#10B981', '#34D399', '#6EE7B7', '#A7F3D0', '#D1FAE5'],
+  });
+  setTimeout(() => {
+    confetti({
+      particleCount: 50,
+      angle: 60,
+      spread: 55,
+      origin: { x: 0 },
+      colors: ['#10B981', '#34D399', '#6EE7B7'],
+    });
+  }, 150);
+  setTimeout(() => {
+    confetti({
+      particleCount: 50,
+      angle: 120,
+      spread: 55,
+      origin: { x: 1 },
+      colors: ['#10B981', '#34D399', '#6EE7B7'],
+    });
+  }, 300);
+};
 
 interface Props {
   lead: Lead;
@@ -41,6 +70,10 @@ export function EditLeadForm({ lead }: Props) {
       setError(error.message);
       setLoading(false);
     } else {
+      // Celebrate when lead is converted to green (signed)!
+      if (formData.status === 'green' && lead.status !== 'green') {
+        triggerConfetti();
+      }
       router.push('/leads/' + lead.id);
       router.refresh();
     }
