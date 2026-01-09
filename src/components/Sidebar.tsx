@@ -18,11 +18,22 @@ import {
   ChevronRight,
   Settings,
   UserCog,
+  Zap,
+  UserCheck,
+  Bell,
+  Gift,
 } from 'lucide-react';
 
 const mainNavItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/leads', label: 'Leads', icon: Users },
+  { href: '/clientes', label: 'Clientes', icon: UserCheck },
+  { href: '/recordatorios', label: 'Recordatorios', icon: Bell },
+];
+
+const energyItems = [
+  { href: '/estudios', label: 'Estudios', icon: Zap },
+  { href: '/referidos', label: 'Referidos', icon: Gift },
 ];
 
 const callCenterItems = [
@@ -116,6 +127,39 @@ export function Sidebar() {
           {collapsed && <div className="h-px bg-white/10 mx-1 mb-2" />}
           <ul className="space-y-0.5">
             {mainNavItems.map((item) => (
+              <li key={item.href}>
+                <Link
+                  href={item.href}
+                  className={`flex items-center py-2 rounded-lg transition-all duration-200 text-sm ${
+                    isActive(item.href)
+                      ? 'bg-white/20 text-white'
+                      : 'text-brand-text hover:bg-white/10'
+                  } ${collapsed ? 'justify-center px-2' : 'gap-2.5 px-2.5'}`}
+                  title={collapsed ? item.label : undefined}
+                >
+                  <item.icon size={18} className="flex-shrink-0" />
+                  {!collapsed && <span>{item.label}</span>}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        {/* Divider */}
+        <div className="h-px bg-white/10 mx-1 mb-4" />
+
+        {/* Energy Section */}
+        <div className="mb-4">
+          {!collapsed && (
+            <div className="flex items-center gap-1.5 px-2 mb-1.5">
+              <Zap size={12} className="text-brand-text/50" />
+              <p className="text-[10px] font-semibold text-brand-text/50 uppercase tracking-wider">
+                Energia
+              </p>
+            </div>
+          )}
+          <ul className="space-y-0.5">
+            {energyItems.map((item) => (
               <li key={item.href}>
                 <Link
                   href={item.href}
