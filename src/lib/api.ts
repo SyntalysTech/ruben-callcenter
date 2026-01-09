@@ -35,6 +35,9 @@ export async function updateLeadStatus(id: string, status: LeadStatus) {
   // If status changed to green (signed), create a client automatically
   if (status === 'green') {
     await convertLeadToClient(id);
+  } else {
+    // If status changed from green to something else, remove the client
+    await removeClientByLeadId(id);
   }
 
   return { error: null };
@@ -143,4 +146,39 @@ export async function updateClient(id: string, updates: Partial<Client>) {
     .select()
     .single();
   return { client: data as Client | null, error };
+}
+
+// Remove client when lead status changes from green
+export async function removeClientByLeadId(leadId: string) {
+  // First find the client
+  const { data: clientData } = await supabase
+    .from('clients')
+    .select('id')
+    .eq('lead_id', leadId)
+    .single();
+
+  if (!clientData) {
+    // No client exists for this lead, nothing to delete
+    return { error: null };
+  }
+
+  const clientId = (clientData as { id: string }).id;
+
+  // Delete associated reminders first
+  await supabase
+    .from('client_reminders')
+    .delete()
+    .eq('client_id', clientId);
+
+  // Then delete the client
+  const { error } = await supabase
+    .from('clients')
+    .delete()
+    .eq('id', clientId);
+
+  if (error) {
+    console.error('Error removing client:', error);
+  }
+
+  return { error };
 }
