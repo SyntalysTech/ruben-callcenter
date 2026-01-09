@@ -25,10 +25,12 @@ import {
   MessageCircle,
   Send,
   FileText,
+  Sparkles,
 } from 'lucide-react';
 
 const mainNavItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/calid-ai', label: 'CalidAI Chat', icon: Sparkles },
   { href: '/leads', label: 'Leads', icon: Users },
   { href: '/clientes', label: 'Clientes', icon: UserCheck },
   { href: '/recordatorios', label: 'Recordatorios', icon: Bell },
