@@ -145,7 +145,7 @@ export default function CalidAIPage() {
               <div className="w-24 h-24 rounded-full bg-gradient-to-br from-brand-primary/20 to-brand-primary/5 flex items-center justify-center mb-6">
                 <div className="w-16 h-16 rounded-full bg-white shadow-lg flex items-center justify-center overflow-hidden">
                   <Image
-                    src="/logos/logo-calidad-energia.png"
+                    src="/logos/logo-circular.png"
                     alt="CalidAI"
                     width={48}
                     height={48}
@@ -198,7 +198,7 @@ export default function CalidAIPage() {
                       <User size={16} className="text-white" />
                     ) : (
                       <Image
-                        src="/logos/logo-calidad-energia.png"
+                        src="/logos/logo-circular.png"
                         alt="CalidAI"
                         width={20}
                         height={20}
@@ -237,7 +237,7 @@ export default function CalidAIPage() {
                 <div className="flex items-end gap-2">
                   <div className="w-8 h-8 rounded-full bg-white border border-gray-200 flex-shrink-0 flex items-center justify-center shadow-sm">
                     <Image
-                      src="/logos/logo-calidad-energia.png"
+                      src="/logos/logo-circular.png"
                       alt="CalidAI"
                       width={20}
                       height={20}
