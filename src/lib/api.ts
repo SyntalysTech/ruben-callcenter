@@ -18,6 +18,16 @@ export async function createLead(lead: Omit<Lead, 'id' | 'created_at' | 'updated
 
 export async function updateLead(id: string, updates: Partial<Lead>) {
   const { data, error } = await supabase.from('leads').update(updates as never).eq('id', id).select().single();
+
+  if (!error && updates.status) {
+    // Sync client when status changes
+    if (updates.status === 'green') {
+      await convertLeadToClient(id);
+    } else {
+      await removeClientByLeadId(id);
+    }
+  }
+
   return { lead: data as Lead | null, error };
 }
 
