@@ -24,7 +24,6 @@ import {
   Gift,
   MessageCircle,
   Send,
-  FileText,
   Sparkles,
 } from 'lucide-react';
 
@@ -44,7 +43,6 @@ const energyItems = [
 const whatsappItems = [
   { href: '/whatsapp', label: 'Conversaciones', icon: MessageCircle },
   { href: '/whatsapp/envios', label: 'Envios masivos', icon: Send },
-  { href: '/whatsapp/plantillas', label: 'Plantillas', icon: FileText },
 ];
 
 const callCenterItems = [
