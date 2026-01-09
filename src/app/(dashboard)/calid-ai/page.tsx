@@ -142,16 +142,14 @@ export default function CalidAIPage() {
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
           {messages.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center text-center px-4">
-              <div className="w-24 h-24 rounded-full bg-gradient-to-br from-brand-primary/20 to-brand-primary/5 flex items-center justify-center mb-6">
-                <div className="w-16 h-16 rounded-full bg-white shadow-lg flex items-center justify-center overflow-hidden">
-                  <Image
-                    src="/logos/logo-circular.png"
-                    alt="CalidAI"
-                    width={48}
-                    height={48}
-                    className="object-contain"
-                  />
-                </div>
+              <div className="w-20 h-20 rounded-full overflow-hidden shadow-lg mb-6">
+                <Image
+                  src="/logos/logo-circular.png"
+                  alt="CalidAI"
+                  width={80}
+                  height={80}
+                  className="w-full h-full object-cover"
+                />
               </div>
               <h2 className="text-xl font-semibold text-gray-900 mb-2">
                 Hola, soy CalidAI
@@ -187,25 +185,21 @@ export default function CalidAIPage() {
                   }`}
                 >
                   {/* Avatar */}
-                  <div
-                    className={`w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center shadow-sm ${
-                      message.role === 'user'
-                        ? 'bg-gray-700'
-                        : 'bg-white border border-gray-200'
-                    }`}
-                  >
-                    {message.role === 'user' ? (
+                  {message.role === 'user' ? (
+                    <div className="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center shadow-sm bg-gray-700">
                       <User size={16} className="text-white" />
-                    ) : (
+                    </div>
+                  ) : (
+                    <div className="w-8 h-8 rounded-full flex-shrink-0 overflow-hidden shadow-sm">
                       <Image
                         src="/logos/logo-circular.png"
                         alt="CalidAI"
-                        width={20}
-                        height={20}
-                        className="object-contain"
+                        width={32}
+                        height={32}
+                        className="w-full h-full object-cover"
                       />
-                    )}
-                  </div>
+                    </div>
+                  )}
 
                   {/* Message Bubble */}
                   <div
@@ -235,13 +229,13 @@ export default function CalidAIPage() {
               {/* Loading indicator */}
               {isLoading && (
                 <div className="flex items-end gap-2">
-                  <div className="w-8 h-8 rounded-full bg-white border border-gray-200 flex-shrink-0 flex items-center justify-center shadow-sm">
+                  <div className="w-8 h-8 rounded-full flex-shrink-0 overflow-hidden shadow-sm">
                     <Image
                       src="/logos/logo-circular.png"
                       alt="CalidAI"
-                      width={20}
-                      height={20}
-                      className="object-contain"
+                      width={32}
+                      height={32}
+                      className="w-full h-full object-cover"
                     />
                   </div>
                   <div className="bg-gray-100 px-4 py-3 rounded-2xl rounded-bl-md">
