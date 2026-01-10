@@ -74,13 +74,14 @@ export async function POST(request: Request) {
 
   // STEP 1: ¿Eres el titular?
   if (step === 1) {
-    // Es titular
-    if (esSi || speech.includes('titular') || speech.includes('soy yo')) {
-      return play(A.factura, baseUrl, 2); // Preguntar factura
-    }
-    // No es titular
-    if (esNo || speech.includes('no soy')) {
+    // PRIMERO: No es titular (detectar antes que el "si" de "soy")
+    if (speech.includes('no soy') || speech.includes('no, ') ||
+        (speech.startsWith('no') && !speech.includes('no sé'))) {
       return play(A.titular_ahi, baseUrl, 3); // ¿Está el titular por ahí?
+    }
+    // Es titular
+    if (esSi || speech.includes('titular') || speech.includes('soy yo') || speech.includes('yo soy')) {
+      return play(A.factura, baseUrl, 2); // Preguntar factura
     }
     return play(A.repite, baseUrl, 1);
   }
