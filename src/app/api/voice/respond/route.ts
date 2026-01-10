@@ -9,6 +9,7 @@ const A = {
   titular_numero: '/audio/titular_numero.mp3',
   titular_hora: '/audio/titular_hora.mp3',
   titular_whatsapp: '/audio/titular_whatsapp.mp3',
+  dime_numero: '/audio/dime_numero.mp3',
   adios: '/audio/adios.mp3',
   adios_factura: '/audio/adios_factura.mp3',
   adios_llamar: '/audio/adios_llamar.mp3',
@@ -115,9 +116,15 @@ export async function POST(request: Request) {
 
   // STEP 4: ¿Me das el número del titular?
   if (step === 4) {
-    // Da el número (detectar dígitos)
+    // Dice que sí - pedir el número
+    if (esSi || speech.includes('apunta') || speech.includes('toma nota')) {
+      return play(A.dime_numero, baseUrl, 6); // Pedir que diga el número
+    }
+    // Da el número directamente (detectar dígitos)
     if (/\d{3,}/.test(speech) || speech.includes('seis') || speech.includes('siete') ||
-        speech.includes('ocho') || speech.includes('nueve')) {
+        speech.includes('ocho') || speech.includes('nueve') || speech.includes('cero') ||
+        speech.includes('uno') || speech.includes('dos') || speech.includes('tres') ||
+        speech.includes('cuatro') || speech.includes('cinco')) {
       return playEnd(A.adios_llamar, baseUrl); // Gracias, le llamo
     }
     // No tiene/no quiere
@@ -125,6 +132,18 @@ export async function POST(request: Request) {
       return play(A.titular_hora, baseUrl, 5); // ¿A qué hora estará?
     }
     return play(A.repite, baseUrl, 4);
+  }
+
+  // STEP 6: Esperando el número
+  if (step === 6) {
+    // Cualquier respuesta con números o palabras de números
+    if (/\d/.test(speech) || speech.includes('seis') || speech.includes('siete') ||
+        speech.includes('ocho') || speech.includes('nueve') || speech.includes('cero') ||
+        speech.includes('uno') || speech.includes('dos') || speech.includes('tres') ||
+        speech.includes('cuatro') || speech.includes('cinco') || speech.length > 5) {
+      return playEnd(A.adios_llamar, baseUrl);
+    }
+    return play(A.repite, baseUrl, 6);
   }
 
   // STEP 5: ¿A qué hora estará?
