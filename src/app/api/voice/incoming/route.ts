@@ -1,29 +1,23 @@
 import { NextResponse } from 'next/server';
 
-// Voz neural de Twilio (rápida)
-const TWILIO_VOICE = 'Polly.Lucia-Neural';
-const TWILIO_LANG = 'es-ES';
+const AUDIO_INCOMING = '/audio/incoming.mp3';
+const AUDIO_SIGUES_AHI = '/audio/sigues_ahi.mp3';
 
-const GREETING = `Hola, gracias por llamar a Calidad Energía. Soy Cristina. ¿En qué puedo ayudarte?`;
-
-export async function POST(request: Request) {
+export async function POST() {
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://ruben-callcenter.vercel.app';
 
   const twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-  <Say voice="${TWILIO_VOICE}" language="${TWILIO_LANG}">${GREETING}</Say>
-  <Gather input="speech" language="es-ES" speechTimeout="2" timeout="8" action="${baseUrl}/api/voice/respond" method="POST"/>
-  <Say voice="${TWILIO_VOICE}" language="${TWILIO_LANG}">¿Sigues ahí?</Say>
-  <Gather input="speech" language="es-ES" speechTimeout="2" timeout="4" action="${baseUrl}/api/voice/respond" method="POST"/>
-  <Say voice="${TWILIO_VOICE}" language="${TWILIO_LANG}">Vale, si necesitas algo llámame.</Say>
+  <Play>${baseUrl}${AUDIO_INCOMING}</Play>
+  <Gather input="speech" language="es-ES" speechTimeout="auto" timeout="8" action="${baseUrl}/api/voice/respond?step=0" method="POST"/>
+  <Play>${baseUrl}${AUDIO_SIGUES_AHI}</Play>
+  <Gather input="speech" language="es-ES" speechTimeout="auto" timeout="4" action="${baseUrl}/api/voice/respond?step=0" method="POST"/>
   <Hangup/>
 </Response>`;
 
-  return new NextResponse(twiml, {
-    headers: { 'Content-Type': 'text/xml' },
-  });
+  return new NextResponse(twiml, { headers: { 'Content-Type': 'text/xml' } });
 }
 
 export async function GET() {
-  return NextResponse.json({ status: 'ok', endpoint: 'Cristina - Incoming Fast' });
+  return NextResponse.json({ status: 'ok', endpoint: 'Cristina - Incoming (ElevenLabs audio)' });
 }

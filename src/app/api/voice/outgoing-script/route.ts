@@ -1,15 +1,12 @@
 import { NextResponse } from 'next/server';
 
-// Voz neural de Twilio (rápida y buena calidad)
-const TWILIO_VOICE = 'Polly.Lucia-Neural';
-const TWILIO_LANG = 'es-ES';
+// Audios pregrabados
+const AUDIO_SALUDO = '/audio/saludo.mp3';
+const AUDIO_SIGUES_AHI = '/audio/sigues_ahi.mp3';
 
-function generateGreeting(leadName?: string): string {
-  if (leadName) {
-    return `¡${leadName}! ¿${leadName}? Sí mira, soy Cristina, del departamento de energía. Estoy entre reuniones y solo tengo treinta segundos. Te llamaba porque estamos ayudando a clientes a ahorrar cuarenta o cincuenta euros al mes en la luz. ¿Sería una locura ver si podemos hacer algo contigo, o lo descartamos?`;
-  }
-  return `¡Hola! Soy Cristina, del departamento de energía. Estoy entre reuniones y solo tengo treinta segundos. Te llamaba porque estamos ayudando a clientes a ahorrar cuarenta o cincuenta euros al mes en la luz. ¿Sería una locura ver si podemos hacer algo contigo, o lo descartamos?`;
-}
+// Fallback Polly para saludos personalizados
+const VOICE = 'Polly.Lucia-Neural';
+const LANG = 'es-ES';
 
 export async function POST(request: Request) {
   const url = new URL(request.url);
@@ -17,29 +14,34 @@ export async function POST(request: Request) {
   const customMessage = url.searchParams.get('message') || '';
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://ruben-callcenter.vercel.app';
 
-  const greeting = customMessage || generateGreeting(leadName || undefined);
+  // Si hay nombre o mensaje custom, usar Polly
+  if (leadName || customMessage) {
+    const greeting = customMessage || `¡${leadName}! ¿${leadName}? Soy Cristina, del departamento de energía. Te llamaba porque estamos ayudando a ahorrar cuarenta o cincuenta euros al mes en la luz. ¿Sería una locura ver si podemos hacer algo contigo?`;
+    const escaped = greeting.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
-  // Escapar para XML
-  const escaped = greeting
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
-
-  // Usar <Say> de Twilio = INSTANTÁNEO
-  const twiml = `<?xml version="1.0" encoding="UTF-8"?>
+    const twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-  <Say voice="${TWILIO_VOICE}" language="${TWILIO_LANG}">${escaped}</Say>
-  <Gather input="speech" language="es-ES" speechTimeout="2" timeout="8" action="${baseUrl}/api/voice/respond" method="POST"/>
-  <Say voice="${TWILIO_VOICE}" language="${TWILIO_LANG}">¿Sigues ahí?</Say>
-  <Gather input="speech" language="es-ES" speechTimeout="2" timeout="4" action="${baseUrl}/api/voice/respond" method="POST"/>
-  <Say voice="${TWILIO_VOICE}" language="${TWILIO_LANG}">Vale, te llamo en otro momento.</Say>
+  <Say voice="${VOICE}" language="${LANG}">${escaped}</Say>
+  <Gather input="speech" language="es-ES" speechTimeout="auto" timeout="6" action="${baseUrl}/api/voice/respond?step=0" method="POST"/>
+  <Play>${baseUrl}${AUDIO_SIGUES_AHI}</Play>
+  <Gather input="speech" language="es-ES" speechTimeout="auto" timeout="4" action="${baseUrl}/api/voice/respond?step=0" method="POST"/>
   <Hangup/>
 </Response>`;
 
-  return new NextResponse(twiml, {
-    headers: { 'Content-Type': 'text/xml' },
-  });
+    return new NextResponse(twiml, { headers: { 'Content-Type': 'text/xml' } });
+  }
+
+  // Sin nombre: usar audio pregrabado (INSTANTÁNEO)
+  const twiml = `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Play>${baseUrl}${AUDIO_SALUDO}</Play>
+  <Gather input="speech" language="es-ES" speechTimeout="auto" timeout="6" action="${baseUrl}/api/voice/respond?step=0" method="POST"/>
+  <Play>${baseUrl}${AUDIO_SIGUES_AHI}</Play>
+  <Gather input="speech" language="es-ES" speechTimeout="auto" timeout="4" action="${baseUrl}/api/voice/respond?step=0" method="POST"/>
+  <Hangup/>
+</Response>`;
+
+  return new NextResponse(twiml, { headers: { 'Content-Type': 'text/xml' } });
 }
 
 export async function GET(request: Request) {
