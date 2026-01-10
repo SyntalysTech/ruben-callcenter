@@ -5,9 +5,8 @@ const ELEVENLABS_API_URL = 'https://api.elevenlabs.io/v1';
 // Voces disponibles en español (puedes cambiar el voice_id)
 // Lista de voces: https://api.elevenlabs.io/v1/voices
 export const VOICE_CONFIG = {
-  // Voz por defecto - Charlotte (clara y profesional)
-  voiceId: '21m00Tcm4TlvDq8ikWAM', // Rachel - voz femenina clara
-  modelId: 'eleven_multilingual_v2', // Modelo multilingüe para español
+  voiceId: '1eHrpOW5l98cxiSRjbzJ',
+  modelId: 'eleven_multilingual_v2',
   stability: 0.5,
   similarityBoost: 0.75,
   style: 0.5,
