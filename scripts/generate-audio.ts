@@ -9,28 +9,35 @@ const VOICE_ID = '1eHrpOW5l98cxiSRjbzJ';
 const MODEL_ID = 'eleven_turbo_v2_5';
 
 // Todos los audios que necesitamos
-const AUDIOS = {
+const AUDIOS: Record<string, string> = {
   // Saludo inicial (outgoing)
   'saludo': '¡Hola! Soy Cristina, del departamento de energía. Estoy entre reuniones y solo tengo treinta segundos. Te llamaba porque estamos ayudando a clientes a ahorrar cuarenta o cincuenta euros al mes en la luz. ¿Sería una locura ver si podemos hacer algo contigo, o lo descartamos?',
 
-  // Preguntas del flujo
+  // Flujo principal
   'titular': '¿Eres el titular del contrato de luz?',
-  'factura': '¿Tienes la factura a mano?',
-  'cierre': 'Perfecto. Te mando WhatsApp ahora, envíame foto de la factura y te digo cuánto puedes ahorrar. ¡Hasta luego!',
+  'factura': 'Perfecto. ¿Tienes la factura a mano, en el móvil o en papel?',
+  'cierre': 'Genial. Te mando un WhatsApp ahora, envíame una foto de la factura y te digo cuánto puedes ahorrar. ¡Hasta luego!',
+
+  // Flujo NO titular
+  'titular_ahi': 'Vale, ¿está el titular por ahí? ¿Puedes pasarle el teléfono?',
+  'titular_numero': 'Entiendo. ¿Me podrías dar el número del titular para llamarle directamente?',
+  'titular_hora': 'Sin problema. ¿A qué hora más o menos estará el titular para que le llame?',
+  'titular_whatsapp': 'Vale, te mando un WhatsApp y cuando esté el titular, que me envíe la factura. ¡Gracias!',
 
   // Despedidas
   'adios': 'Vale, sin problema. ¡Hasta luego!',
-  'adios_titular': 'Vale, te mando WhatsApp para el titular. ¡Hasta luego!',
   'adios_factura': 'Te mando WhatsApp y me la pasas cuando puedas. ¡Hasta luego!',
+  'adios_llamar': 'Perfecto, le llamo a esa hora entonces. ¡Hasta luego!',
 
   // Objeciones comunes
   'quien_soy': 'Cristina, de Calidad Energía. Ayudamos a bajar la factura de la luz. ¿Eres el titular?',
-  'gratis': 'Sí, es sin coste. Solo revisamos tu factura para ver si puedes ahorrar. ¿Eres el titular?',
-  'como_funciona': 'Muy fácil. Me mandas foto de la factura por WhatsApp y te digo cuánto puedes ahorrar. ¿La tienes a mano?',
+  'gratis': 'Sí, es totalmente gratis. Solo revisamos tu factura para ver si puedes ahorrar. ¿Eres el titular?',
+  'como_funciona': 'Muy fácil. Me mandas foto de la factura por WhatsApp y te digo cuánto puedes ahorrar. Sin compromiso.',
 
   // Fallbacks
   'no_entendi': '¿Perdona? No te he escuchado bien.',
   'sigues_ahi': '¿Sigues ahí?',
+  'repite': '¿Puedes repetir?',
 
   // Incoming
   'incoming': 'Hola, gracias por llamar a Calidad Energía. Soy Cristina. ¿En qué puedo ayudarte?',
