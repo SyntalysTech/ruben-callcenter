@@ -2,8 +2,9 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
 export async function middleware(request: NextRequest) {
-  // Skip auth for voice API endpoints (Twilio webhooks)
-  if (request.nextUrl.pathname.startsWith('/api/voice')) {
+  // Skip auth for voice API endpoints (Twilio webhooks) and audio files
+  if (request.nextUrl.pathname.startsWith('/api/voice') ||
+      request.nextUrl.pathname.startsWith('/audio')) {
     return NextResponse.next();
   }
 
