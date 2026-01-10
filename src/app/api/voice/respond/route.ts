@@ -10,9 +10,11 @@ const A = {
   titular_hora: '/audio/titular_hora.mp3',
   titular_whatsapp: '/audio/titular_whatsapp.mp3',
   dime_numero: '/audio/dime_numero.mp3',
+  que_dia: '/audio/que_dia.mp3',
+  que_hora: '/audio/que_hora.mp3',
+  gracias_llamar: '/audio/gracias_llamar.mp3',
   adios: '/audio/adios.mp3',
   adios_factura: '/audio/adios_factura.mp3',
-  adios_llamar: '/audio/adios_llamar.mp3',
   quien_soy: '/audio/quien_soy.mp3',
   gratis: '/audio/gratis.mp3',
   como_funciona: '/audio/como_funciona.mp3',
@@ -22,12 +24,15 @@ const A = {
 
 /*
 FLUJO DE ESTADOS:
-0 = esperando respuesta al saludo (¿te interesa?)
-1 = preguntó si es titular
-2 = es titular, preguntó factura
-3 = no es titular, preguntó si está por ahí
-4 = no está, preguntó número del titular
-5 = no tiene número, preguntó hora para llamar
+0 = respuesta al saludo (¿te pillo bien?)
+1 = ¿eres el titular?
+2 = (es titular) ¿tienes la factura?
+3 = (no es titular) ¿está el titular por ahí?
+4 = ¿me das el número del titular?
+5 = (no tiene número) ¿a qué hora estará?
+6 = esperando el número
+7 = ¿qué día le viene mejor?
+8 = ¿a qué hora?
 */
 
 export async function POST(request: Request) {
@@ -47,7 +52,7 @@ export async function POST(request: Request) {
 
   // === OBJECIONES (cualquier momento) ===
   if (speech.includes('quien') || speech.includes('quién')) {
-    return play(A.quien_soy, baseUrl, 1); // Vuelve a preguntar titular
+    return play(A.quien_soy, baseUrl, 1);
   }
   if (speech.includes('cuanto') || speech.includes('cuánto') || speech.includes('gratis') || speech.includes('coste')) {
     return play(A.gratis, baseUrl, 1);
@@ -61,41 +66,37 @@ export async function POST(request: Request) {
                speech.includes('claro') || speech.includes('ok') || speech.includes('bueno') ||
                speech.includes('adelante') || speech.includes('dime') || speech.includes('correcto');
 
-  const esNo = speech.includes('no ') || speech.startsWith('no') || speech === 'no';
-
   // === FLUJO POR ESTADO ===
 
   // STEP 0: Respuesta al saludo inicial
   if (step === 0) {
     if (esSi || speech.length > 2) {
-      return play(A.titular, baseUrl, 1); // Preguntar si es titular
+      return play(A.titular, baseUrl, 1);
     }
     return play(A.no_entendi, baseUrl, 0);
   }
 
   // STEP 1: ¿Eres el titular?
   if (step === 1) {
-    // PRIMERO: No es titular (detectar antes que el "si" de "soy")
+    // No es titular
     if (speech.includes('no soy') || speech.includes('no, ') ||
         (speech.startsWith('no') && !speech.includes('no sé'))) {
-      return play(A.titular_ahi, baseUrl, 3); // ¿Está el titular por ahí?
+      return play(A.titular_ahi, baseUrl, 3);
     }
     // Es titular
     if (esSi || speech.includes('titular') || speech.includes('soy yo') || speech.includes('yo soy')) {
-      return play(A.factura, baseUrl, 2); // Preguntar factura
+      return play(A.factura, baseUrl, 2);
     }
     return play(A.repite, baseUrl, 1);
   }
 
-  // STEP 2: ¿Tienes la factura? (es titular)
+  // STEP 2: ¿Tienes la factura?
   if (step === 2) {
-    // Tiene factura
     if (esSi || speech.includes('tengo') || speech.includes('la tengo') ||
         speech.includes('aquí') || speech.includes('aqui') || speech.includes('movil') || speech.includes('papel')) {
-      return playEnd(A.cierre, baseUrl); // Cierre exitoso
+      return playEnd(A.cierre, baseUrl);
     }
-    // No tiene factura
-    if (esNo || speech.includes('no la tengo') || speech.includes('ahora no')) {
+    if (speech.startsWith('no') || speech.includes('no la tengo') || speech.includes('ahora no')) {
       return playEnd(A.adios_factura, baseUrl);
     }
     return play(A.repite, baseUrl, 2);
@@ -103,65 +104,81 @@ export async function POST(request: Request) {
 
   // STEP 3: ¿Está el titular por ahí?
   if (step === 3) {
-    // Sí está
     if (esSi || speech.includes('espera') || speech.includes('ahora') || speech.includes('te paso')) {
-      return play(A.titular, baseUrl, 1); // Esperar a que se ponga el titular
+      return play(A.titular, baseUrl, 1);
     }
-    // No está
-    if (esNo || speech.includes('no está') || speech.includes('no esta') || speech.includes('trabaja')) {
-      return play(A.titular_numero, baseUrl, 4); // Pedir número
+    if (speech.startsWith('no') || speech.includes('no está') || speech.includes('no esta') || speech.includes('trabaja')) {
+      return play(A.titular_numero, baseUrl, 4);
     }
     return play(A.repite, baseUrl, 3);
   }
 
   // STEP 4: ¿Me das el número del titular?
   if (step === 4) {
-    // Dice que sí - pedir el número
+    // Dice que sí
     if (esSi || speech.includes('apunta') || speech.includes('toma nota')) {
-      return play(A.dime_numero, baseUrl, 6); // Pedir que diga el número
+      return play(A.dime_numero, baseUrl, 6);
     }
-    // Da el número directamente (detectar dígitos)
-    if (/\d{3,}/.test(speech) || speech.includes('seis') || speech.includes('siete') ||
-        speech.includes('ocho') || speech.includes('nueve') || speech.includes('cero') ||
-        speech.includes('uno') || speech.includes('dos') || speech.includes('tres') ||
-        speech.includes('cuatro') || speech.includes('cinco')) {
-      return playEnd(A.adios_llamar, baseUrl); // Gracias, le llamo
+    // Da el número directamente
+    if (tieneNumeros(speech)) {
+      return play(A.que_dia, baseUrl, 7); // Preguntar qué día
     }
     // No tiene/no quiere
-    if (esNo || speech.includes('no sé') || speech.includes('no se') || speech.includes('no tengo')) {
-      return play(A.titular_hora, baseUrl, 5); // ¿A qué hora estará?
+    if (speech.startsWith('no') || speech.includes('no sé') || speech.includes('no se') || speech.includes('no tengo')) {
+      return play(A.titular_hora, baseUrl, 5);
     }
     return play(A.repite, baseUrl, 4);
   }
 
   // STEP 6: Esperando el número
   if (step === 6) {
-    // Cualquier respuesta con números o palabras de números
-    if (/\d/.test(speech) || speech.includes('seis') || speech.includes('siete') ||
-        speech.includes('ocho') || speech.includes('nueve') || speech.includes('cero') ||
-        speech.includes('uno') || speech.includes('dos') || speech.includes('tres') ||
-        speech.includes('cuatro') || speech.includes('cinco') || speech.length > 5) {
-      return playEnd(A.adios_llamar, baseUrl);
+    if (tieneNumeros(speech) || speech.length > 5) {
+      return play(A.que_dia, baseUrl, 7); // Preguntar qué día
     }
     return play(A.repite, baseUrl, 6);
   }
 
-  // STEP 5: ¿A qué hora estará?
+  // STEP 7: ¿Qué día le viene mejor?
+  if (step === 7) {
+    if (speech.includes('hoy') || speech.includes('mañana') || speech.includes('pasado') ||
+        speech.includes('lunes') || speech.includes('martes') || speech.includes('miercoles') ||
+        speech.includes('jueves') || speech.includes('viernes') || speech.includes('sabado') ||
+        speech.includes('semana') || speech.includes('dia') || speech.length > 2) {
+      return play(A.que_hora, baseUrl, 8); // Preguntar hora
+    }
+    return play(A.repite, baseUrl, 7);
+  }
+
+  // STEP 8: ¿A qué hora?
+  if (step === 8) {
+    if (speech.includes('mañana') || speech.includes('tarde') || speech.includes('noche') ||
+        speech.includes('mediodia') || speech.includes('hora') || /\d/.test(speech) ||
+        speech.length > 2) {
+      return playEnd(A.gracias_llamar, baseUrl); // Cierre
+    }
+    return play(A.repite, baseUrl, 8);
+  }
+
+  // STEP 5: ¿A qué hora estará? (no tiene número)
   if (step === 5) {
-    // Da una hora
     if (speech.includes('mañana') || speech.includes('tarde') || speech.includes('noche') ||
         /\d+/.test(speech) || speech.includes('hora') || speech.includes('luego')) {
-      return playEnd(A.adios_llamar, baseUrl);
+      return playEnd(A.gracias_llamar, baseUrl);
     }
-    // No sabe
-    if (esNo || speech.includes('no sé') || speech.includes('no se')) {
-      return playEnd(A.titular_whatsapp, baseUrl); // Envío WhatsApp
+    if (speech.startsWith('no') || speech.includes('no sé') || speech.includes('no se')) {
+      return playEnd(A.titular_whatsapp, baseUrl);
     }
     return play(A.repite, baseUrl, 5);
   }
 
-  // Fallback
   return play(A.no_entendi, baseUrl, step);
+}
+
+function tieneNumeros(s: string): boolean {
+  return /\d/.test(s) || s.includes('seis') || s.includes('siete') ||
+         s.includes('ocho') || s.includes('nueve') || s.includes('cero') ||
+         s.includes('uno') || s.includes('dos') || s.includes('tres') ||
+         s.includes('cuatro') || s.includes('cinco');
 }
 
 function play(audioPath: string, baseUrl: string, nextStep: number): NextResponse {
