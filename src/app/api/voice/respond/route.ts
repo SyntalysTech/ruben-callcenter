@@ -1,119 +1,102 @@
 import { NextResponse } from 'next/server';
 
-// Voz de Twilio
-const TWILIO_VOICE = 'Polly.Lucia-Neural';
-const TWILIO_LANG = 'es-ES';
+const VOICE = 'Polly.Lucia-Neural';
+const LANG = 'es-ES';
 
-// Respuestas pre-definidas para casos comunes (INSTANTÁNEO, sin OpenAI)
-const QUICK_RESPONSES: Record<string, string> = {
-  // Afirmaciones
-  'si': '¿Eres el titular del contrato de luz?',
-  'sí': '¿Eres el titular del contrato de luz?',
-  'vale': 'Perfecto. ¿Tienes la factura a mano?',
-  'ok': 'Perfecto. ¿Tienes la factura a mano?',
-  'claro': 'Genial. ¿Tienes la factura a mano?',
-  'bueno': 'Genial. ¿Tienes la factura a mano?',
-  'dime': 'Vale, solo necesito confirmar tres cosas rápidas. ¿Eres el titular del contrato?',
-  'adelante': 'Vale, solo necesito confirmar tres cosas rápidas. ¿Eres el titular del contrato?',
+// Estados de la conversación
+type State = 'inicio' | 'titular' | 'factura' | 'cierre';
 
-  // Titular
-  'soy el titular': 'Perfecto. ¿Tienes la factura a mano, en papel o en el móvil?',
-  'si soy el titular': 'Perfecto. ¿Tienes la factura a mano, en papel o en el móvil?',
-  'yo soy el titular': 'Perfecto. ¿Tienes la factura a mano, en papel o en el móvil?',
+// Memoria de estado por llamada
+const callState = new Map<string, State>();
 
-  // Factura
-  'si la tengo': 'Genial. Te mando un WhatsApp ahora, envíame una foto y te digo el ahorro exacto.',
-  'sí la tengo': 'Genial. Te mando un WhatsApp ahora, envíame una foto y te digo el ahorro exacto.',
-  'la tengo': 'Genial. Te mando un WhatsApp ahora, envíame una foto y te digo el ahorro exacto.',
-  'si tengo': 'Genial. Te mando un WhatsApp ahora, envíame una foto y te digo el ahorro exacto.',
-
-  // No tiene factura
-  'no la tengo': 'No pasa nada. Te mando WhatsApp y me la envías cuando puedas.',
-  'ahora no': 'Sin problema. Te mando WhatsApp y me la envías cuando tengas un momento.',
-  'no tengo': 'Vale. Te mando WhatsApp y cuando la tengas me la pasas.',
-
-  // Objeciones comunes
-  'quien eres': 'Cristina, de Calidad Energía. Revisamos si puedes pagar menos en la luz.',
-  'quién eres': 'Cristina, de Calidad Energía. Revisamos si puedes pagar menos en la luz.',
-  'de donde llamas': 'De Calidad Energía. Ayudamos a bajar la factura de la luz.',
-  'de dónde llamas': 'De Calidad Energía. Ayudamos a bajar la factura de la luz.',
-  'esto que es': 'Revisamos tu factura de luz para ver si puedes ahorrar. Sin coste ni compromiso.',
-  'esto qué es': 'Revisamos tu factura de luz para ver si puedes ahorrar. Sin coste ni compromiso.',
-  'cuanto cuesta': 'Nada, es sin coste. Solo miramos si puedes pagar menos.',
-  'cuánto cuesta': 'Nada, es sin coste. Solo miramos si puedes pagar menos.',
-  'es gratis': 'Sí, sin coste. Solo revisamos tu factura.',
-
-  // No interesado
-  'no me interesa': 'Vale, sin problema. Cuando quieras estoy por aquí. ¡Hasta luego!',
-  'no gracias': 'Vale, sin problema. ¡Hasta luego!',
-  'no quiero': 'Perfecto, cuando quieras. ¡Hasta luego!',
-  'dejalo': 'Vale. ¡Hasta luego!',
-  'déjalo': 'Vale. ¡Hasta luego!',
-
-  // Despedidas positivas
-  'gracias': 'A ti. Te mando el WhatsApp ahora. ¡Hasta luego!',
-  'perfecto': 'Genial. Te mando WhatsApp ahora, envíame la foto de la factura.',
-  'de acuerdo': 'Perfecto. Te mando WhatsApp, envíame la factura cuando puedas.',
-  'muy bien': 'Genial. Te mando WhatsApp ahora.',
+// Flujo de la conversación
+const FLOW: Record<State, { question: string; nextState: State }> = {
+  inicio: {
+    question: '¿Eres el titular del contrato de luz?',
+    nextState: 'titular'
+  },
+  titular: {
+    question: '¿Tienes la factura a mano, en papel o en el móvil?',
+    nextState: 'factura'
+  },
+  factura: {
+    question: 'Perfecto. Te mando un WhatsApp ahora, envíame una foto de la factura y te digo cuánto puedes ahorrar.',
+    nextState: 'cierre'
+  },
+  cierre: {
+    question: '¡Genial! Te llega el WhatsApp en un momento. ¡Hasta luego!',
+    nextState: 'cierre'
+  }
 };
-
-// Detectar fin de llamada
-const END_PHRASES = ['no me interesa', 'no gracias', 'no quiero', 'dejalo', 'déjalo', 'adios', 'adiós', 'hasta luego', 'cuelgo'];
 
 export async function POST(request: Request) {
   const formData = await request.formData();
-  const speechResult = formData.get('SpeechResult') as string;
+  const speech = (formData.get('SpeechResult') as string || '').toLowerCase().trim();
+  const callSid = formData.get('CallSid') as string;
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://ruben-callcenter.vercel.app';
 
-  console.log(`[Voice] Dijo: "${speechResult}"`);
+  console.log(`[Voice] ${callSid}: "${speech}"`);
 
-  if (!speechResult) {
-    return twiml('¿Perdona?', baseUrl, false);
+  // Detectar rechazo
+  if (speech.includes('no me interesa') || speech.includes('no gracias') || speech.includes('adios') || speech.includes('dejalo')) {
+    callState.delete(callSid);
+    return say('Vale, sin problema. ¡Hasta luego!', baseUrl, true);
   }
 
-  const input = speechResult.toLowerCase().trim();
-
-  // Detectar fin de llamada
-  const isEnd = END_PHRASES.some(p => input.includes(p));
-  if (isEnd) {
-    return twiml('Vale, cuando quieras. ¡Hasta luego!', baseUrl, true);
+  // Detectar "no soy titular"
+  if (speech.includes('no soy') && speech.includes('titular')) {
+    callState.delete(callSid);
+    return say('Vale, necesitamos hablar con el titular. Te mando WhatsApp para que nos pase la factura. ¡Hasta luego!', baseUrl, true);
   }
 
-  // Buscar respuesta rápida (SIN OPENAI = INSTANTÁNEO)
-  for (const [key, response] of Object.entries(QUICK_RESPONSES)) {
-    if (input.includes(key) || input === key) {
-      const shouldEnd = response.includes('Hasta luego');
-      return twiml(response, baseUrl, shouldEnd);
+  // Detectar "no tengo factura"
+  if ((speech.includes('no') && speech.includes('tengo')) || speech.includes('no la tengo') || speech.includes('ahora no')) {
+    callState.delete(callSid);
+    return say('Sin problema. Te mando WhatsApp y me la envías cuando puedas. ¡Hasta luego!', baseUrl, true);
+  }
+
+  // Objeciones rápidas
+  if (speech.includes('quien eres') || speech.includes('quién eres')) {
+    return say('Cristina, de Calidad Energía. Revisamos si puedes ahorrar en la luz. ¿Eres el titular?', baseUrl, false);
+  }
+  if (speech.includes('cuanto cuesta') || speech.includes('cuánto cuesta')) {
+    return say('Nada, sin coste. ¿Eres el titular del contrato?', baseUrl, false);
+  }
+
+  // Obtener estado actual
+  let state = callState.get(callSid) || 'inicio';
+
+  // Detectar respuesta positiva y avanzar
+  const isPositive = speech.includes('si') || speech.includes('sí') || speech.includes('vale') ||
+                     speech.includes('claro') || speech.includes('ok') || speech.includes('bueno') ||
+                     speech.includes('tengo') || speech.includes('titular') || speech.includes('correcto');
+
+  if (isPositive || speech.length > 2) {
+    // Avanzar al siguiente estado
+    const current = FLOW[state];
+    state = current.nextState;
+    callState.set(callSid, state);
+
+    const next = FLOW[state];
+    const isEnd = state === 'cierre';
+
+    if (isEnd) {
+      callState.delete(callSid);
     }
+
+    return say(next.question, baseUrl, isEnd);
   }
 
-  // Fallback: respuesta genérica (aún sin OpenAI)
-  // Solo usamos OpenAI si realmente no entendemos
-  if (input.length < 3) {
-    return twiml('¿Puedes repetir?', baseUrl, false);
-  }
-
-  // Para casos no mapeados, damos respuesta genérica que avanza la conversación
-  return twiml('Vale, perfecto. ¿Tienes la factura de la luz a mano?', baseUrl, false);
+  // No entendí - repetir pregunta actual
+  return say('¿Perdona? ' + FLOW[state].question, baseUrl, false);
 }
 
-function twiml(message: string, baseUrl: string, endCall: boolean): NextResponse {
-  const escaped = message.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+function say(msg: string, baseUrl: string, end: boolean): NextResponse {
+  const escaped = msg.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
-  const xml = endCall
-    ? `<?xml version="1.0" encoding="UTF-8"?>
-<Response>
-  <Say voice="${TWILIO_VOICE}" language="${TWILIO_LANG}">${escaped}</Say>
-  <Hangup/>
-</Response>`
-    : `<?xml version="1.0" encoding="UTF-8"?>
-<Response>
-  <Say voice="${TWILIO_VOICE}" language="${TWILIO_LANG}">${escaped}</Say>
-  <Gather input="speech" language="es-ES" speechTimeout="2" timeout="5" action="${baseUrl}/api/voice/respond" method="POST"/>
-  <Say voice="${TWILIO_VOICE}" language="${TWILIO_LANG}">¿Sigues ahí?</Say>
-  <Gather input="speech" language="es-ES" speechTimeout="2" timeout="3" action="${baseUrl}/api/voice/respond" method="POST"/>
-  <Hangup/>
-</Response>`;
+  const xml = end
+    ? `<?xml version="1.0" encoding="UTF-8"?><Response><Say voice="${VOICE}" language="${LANG}">${escaped}</Say><Hangup/></Response>`
+    : `<?xml version="1.0" encoding="UTF-8"?><Response><Say voice="${VOICE}" language="${LANG}">${escaped}</Say><Gather input="speech" language="es-ES" speechTimeout="2" timeout="6" action="${baseUrl}/api/voice/respond" method="POST"/><Hangup/></Response>`;
 
   return new NextResponse(xml, { headers: { 'Content-Type': 'text/xml' } });
 }
