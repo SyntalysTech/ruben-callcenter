@@ -3,12 +3,12 @@ import { NextResponse } from 'next/server';
 const VOICE = 'Polly.Lucia-Neural';
 const LANG = 'es-ES';
 
-// Estados: 0=titular, 1=factura, 2=cierre
+// Estados: 0=titular, 1=factura (después cuelga)
 const PREGUNTAS = [
   '¿Eres el titular del contrato de luz?',
-  '¿Tienes la factura a mano?',
-  'Perfecto. Te mando WhatsApp, envíame foto de la factura. ¡Hasta luego!'
+  '¿Tienes la factura a mano?'
 ];
+const CIERRE = 'Perfecto. Te mando WhatsApp, envíame foto de la factura. ¡Hasta luego!';
 
 export async function POST(request: Request) {
   const formData = await request.formData();
@@ -38,8 +38,9 @@ export async function POST(request: Request) {
   // Siguiente paso
   const next = step + 1;
 
-  if (next >= PREGUNTAS.length) {
-    return end(PREGUNTAS[PREGUNTAS.length - 1]);
+  // Si ya pasó factura (step 1), cerrar
+  if (next > PREGUNTAS.length - 1) {
+    return end(CIERRE);
   }
 
   // Continuar conversación
