@@ -25,6 +25,7 @@ import {
   MessageCircle,
   Send,
   Sparkles,
+  PhoneCall,
 } from 'lucide-react';
 
 const mainNavItems = [
@@ -46,10 +47,11 @@ const whatsappItems = [
 ];
 
 const callCenterItems = [
-  { href: '/call-center/saldo', label: 'Saldo', icon: Wallet },
-  { href: '/call-center/llamadas', label: 'Llamadas', icon: History },
-  { href: '/call-center/grabaciones', label: 'Grabaciones', icon: Mic },
-  { href: '/call-center/metricas', label: 'Metricas', icon: BarChart3 },
+  { href: '/call-center/prueba', label: 'Prueba de voz', icon: PhoneCall, active: true },
+  { href: '/call-center/saldo', label: 'Saldo', icon: Wallet, active: false },
+  { href: '/call-center/llamadas', label: 'Llamadas', icon: History, active: false },
+  { href: '/call-center/grabaciones', label: 'Grabaciones', icon: Mic, active: false },
+  { href: '/call-center/metricas', label: 'Metricas', icon: BarChart3, active: false },
 ];
 
 const adminItems = [
@@ -228,27 +230,39 @@ export function Sidebar() {
         <div className="mb-4">
           {!collapsed && (
             <div className="flex items-center gap-1.5 px-2 mb-1.5">
+              <PhoneCall size={12} className="text-brand-text/50" />
               <p className="text-[10px] font-semibold text-brand-text/50 uppercase tracking-wider">
                 Call Center
               </p>
-              <span className="text-[10px] bg-yellow-500 text-black px-1.5 py-0.5 rounded-full">
-                Pronto
-              </span>
             </div>
           )}
           <ul className="space-y-0.5">
             {callCenterItems.map((item) => (
               <li key={item.href}>
-                <Link
-                  href={item.href}
-                  className={`flex items-center py-1.5 rounded-lg transition-all duration-200 text-brand-text/50 cursor-not-allowed text-sm ${
-                    collapsed ? 'justify-center px-2' : 'gap-2.5 px-2.5'
-                  }`}
-                  title={collapsed ? item.label : undefined}
-                >
-                  <item.icon size={16} className="flex-shrink-0" />
-                  {!collapsed && <span>{item.label}</span>}
-                </Link>
+                {item.active ? (
+                  <Link
+                    href={item.href}
+                    className={`flex items-center py-2 rounded-lg transition-all duration-200 text-sm ${
+                      isActive(item.href)
+                        ? 'bg-white/20 text-white'
+                        : 'text-brand-text hover:bg-white/10'
+                    } ${collapsed ? 'justify-center px-2' : 'gap-2.5 px-2.5'}`}
+                    title={collapsed ? item.label : undefined}
+                  >
+                    <item.icon size={18} className="flex-shrink-0" />
+                    {!collapsed && <span>{item.label}</span>}
+                  </Link>
+                ) : (
+                  <span
+                    className={`flex items-center py-1.5 rounded-lg text-brand-text/50 cursor-not-allowed text-sm ${
+                      collapsed ? 'justify-center px-2' : 'gap-2.5 px-2.5'
+                    }`}
+                    title={collapsed ? item.label : undefined}
+                  >
+                    <item.icon size={16} className="flex-shrink-0" />
+                    {!collapsed && <span>{item.label}</span>}
+                  </span>
+                )}
               </li>
             ))}
           </ul>
