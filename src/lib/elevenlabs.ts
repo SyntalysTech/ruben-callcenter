@@ -6,11 +6,11 @@ const ELEVENLABS_API_URL = 'https://api.elevenlabs.io/v1';
 // Lista de voces: https://api.elevenlabs.io/v1/voices
 export const VOICE_CONFIG = {
   voiceId: '1eHrpOW5l98cxiSRjbzJ',
-  modelId: 'eleven_multilingual_v2',
+  modelId: 'eleven_turbo_v2_5', // TURBO para baja latencia
   stability: 0.5,
   similarityBoost: 0.75,
-  style: 0.5,
-  useSpeakerBoost: true
+  style: 0.3,
+  useSpeakerBoost: false // Desactivado para más velocidad
 };
 
 export interface ElevenLabsConfig {

@@ -117,15 +117,15 @@ export async function POST(request: Request) {
     let history = conversationHistory.get(callSid) || [];
     history.push({ role: 'user', content: speechResult });
 
-    // Generar respuesta con OpenAI
+    // Generar respuesta con OpenAI - USANDO GPT-4O-MINI PARA VELOCIDAD
     const completion = await openai.chat.completions.create({
-      model: 'gpt-4o',
+      model: 'gpt-4o-mini',
       messages: [
         { role: 'system', content: SYSTEM_PROMPT },
         ...history.map(h => ({ role: h.role as 'user' | 'assistant', content: h.content }))
       ],
-      max_tokens: 100,
-      temperature: 0.8,
+      max_tokens: 60,
+      temperature: 0.7,
     });
 
     const assistantResponse = completion.choices[0].message.content || 'Perdona, no te he pillado. ¿Puedes repetir?';
