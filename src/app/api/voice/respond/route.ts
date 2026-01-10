@@ -5,12 +5,6 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-// Configuración de voz
-const VOICE_CONFIG = {
-  voice: 'Polly.Lucia',
-  language: 'es-ES'
-};
-
 // System prompt para el agente de Calidad Energía - PERSONALIZABLE
 const SYSTEM_PROMPT = `Eres el asistente telefónico de Calidad Energía, una empresa especializada en soluciones energéticas y contratos de luz y gas.
 
@@ -49,6 +43,10 @@ IMPORTANTE: Respuestas MUY cortas, máximo 2-3 frases. Es una llamada telefónic
 
 // Historial de conversación por llamada
 const conversationHistory: Map<string, Array<{role: string, content: string}>> = new Map();
+
+function getTtsUrl(text: string, baseUrl: string): string {
+  return `${baseUrl}/api/voice/tts?text=${encodeURIComponent(text)}`;
+}
 
 export async function POST(request: Request) {
   try {
@@ -121,29 +119,26 @@ export async function POST(request: Request) {
 }
 
 function generateTwimlResponse(message: string, baseUrl: string, endCall: boolean): NextResponse {
-  const escapedMessage = message
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&apos;');
+  const audioUrl = getTtsUrl(message, baseUrl);
+  const followUpUrl = getTtsUrl('¿Algo más en lo que pueda ayudarle?', baseUrl);
+  const timeoutUrl = getTtsUrl('No le he escuchado. Gracias por llamar a Calidad Energía. ¡Hasta luego!', baseUrl);
 
   let twiml: string;
 
   if (endCall) {
     twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-  <Say voice="${VOICE_CONFIG.voice}" language="${VOICE_CONFIG.language}">${escapedMessage}</Say>
+  <Play>${audioUrl}</Play>
   <Hangup/>
 </Response>`;
   } else {
     twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-  <Say voice="${VOICE_CONFIG.voice}" language="${VOICE_CONFIG.language}">${escapedMessage}</Say>
+  <Play>${audioUrl}</Play>
   <Gather input="speech" language="es-ES" speechTimeout="auto" action="${baseUrl}/api/voice/respond" method="POST">
-    <Say voice="${VOICE_CONFIG.voice}" language="${VOICE_CONFIG.language}">¿Algo más en lo que pueda ayudarle?</Say>
+    <Play>${followUpUrl}</Play>
   </Gather>
-  <Say voice="${VOICE_CONFIG.voice}" language="${VOICE_CONFIG.language}">No le he escuchado. Gracias por llamar a Calidad Energía. ¡Hasta luego!</Say>
+  <Play>${timeoutUrl}</Play>
 </Response>`;
   }
 
@@ -157,6 +152,6 @@ function generateTwimlResponse(message: string, baseUrl: string, endCall: boolea
 export async function GET() {
   return NextResponse.json({
     status: 'ok',
-    endpoint: 'Calidad Energia Voice - Response Handler'
+    endpoint: 'Calidad Energia Voice - Response Handler (ElevenLabs)'
   });
 }

@@ -1,10 +1,8 @@
 import { NextResponse } from 'next/server';
 
-// Configuración de voz
-const VOICE_CONFIG = {
-  voice: 'Polly.Lucia',
-  language: 'es-ES'
-};
+function getTtsUrl(text: string, baseUrl: string): string {
+  return `${baseUrl}/api/voice/tts?text=${encodeURIComponent(text)}`;
+}
 
 // Script para llamadas salientes a leads
 export async function POST(request: Request) {
@@ -24,13 +22,16 @@ export async function POST(request: Request) {
     greeting = `Hola, le llamo de Calidad Energía. ¿Tiene un momento para hablar sobre cómo podemos ayudarle a ahorrar en su factura de luz?`;
   }
 
+  const listeningMsg = `Le escucho.`;
+  const noResponseMsg = `Parece que no hay respuesta. Le volveremos a llamar en otro momento. ¡Hasta luego!`;
+
   const twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-  <Say voice="${VOICE_CONFIG.voice}" language="${VOICE_CONFIG.language}">${greeting}</Say>
+  <Play>${getTtsUrl(greeting, baseUrl)}</Play>
   <Gather input="speech" language="es-ES" speechTimeout="auto" action="${baseUrl}/api/voice/respond" method="POST">
-    <Say voice="${VOICE_CONFIG.voice}" language="${VOICE_CONFIG.language}">Le escucho.</Say>
+    <Play>${getTtsUrl(listeningMsg, baseUrl)}</Play>
   </Gather>
-  <Say voice="${VOICE_CONFIG.voice}" language="${VOICE_CONFIG.language}">Parece que no hay respuesta. Le volveremos a llamar en otro momento. ¡Hasta luego!</Say>
+  <Play>${getTtsUrl(noResponseMsg, baseUrl)}</Play>
 </Response>`;
 
   return new NextResponse(twiml, {
