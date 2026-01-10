@@ -9,6 +9,7 @@ const VERIFIED_TEST_NUMBER = '+34684094634';
 export default function PruebaLlamadaPage() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<{ success: boolean; message: string; callSid?: string } | null>(null);
+  const [leadName, setLeadName] = useState('Carlos');
   const [customMessage, setCustomMessage] = useState('');
 
   const handleTestCall = async () => {
@@ -23,7 +24,7 @@ export default function PruebaLlamadaPage() {
         },
         body: JSON.stringify({
           to: VERIFIED_TEST_NUMBER,
-          leadName: 'Prueba',
+          leadName: leadName || undefined,
           customMessage: customMessage || undefined,
         }),
       });
@@ -101,15 +102,34 @@ export default function PruebaLlamadaPage() {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
+                Nombre del lead
+              </label>
+              <input
+                type="text"
+                value={leadName}
+                onChange={(e) => setLeadName(e.target.value)}
+                placeholder="Nombre para personalizar el saludo"
+                className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Cristina dira: &quot;¡Carlos! ¿Carlos?&quot; al inicio
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
                 Mensaje personalizado (opcional)
               </label>
               <textarea
                 value={customMessage}
                 onChange={(e) => setCustomMessage(e.target.value)}
-                placeholder="Deja vacio para usar el saludo por defecto..."
+                placeholder="Deja vacio para usar el script profesional..."
                 className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
                 rows={3}
               />
+              <p className="text-xs text-gray-500 mt-1">
+                Si escribes algo aqui, se usara en lugar del script por defecto
+              </p>
             </div>
 
             <div className="flex gap-3">

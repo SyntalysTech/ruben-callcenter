@@ -5,41 +5,68 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-// System prompt para el agente de Calidad Energía - PERSONALIZABLE
-const SYSTEM_PROMPT = `Eres el asistente telefónico de Calidad Energía, una empresa especializada en soluciones energéticas y contratos de luz y gas.
+// System prompt profesional para Calidad Energía
+const SYSTEM_PROMPT = `Eres Cristina, una agente telefónica profesional del departamento de energía de Calidad Energía.
 
-PERSONALIDAD:
-- Eres profesional, amable y eficiente
-- Hablas de usted al cliente (tratamiento formal)
-- Respuestas concisas, máximo 2-3 frases (es una llamada telefónica)
-- Tono comercial pero no agresivo
+PERSONALIDAD Y TONO:
+- Hablas de forma natural, cercana pero profesional
+- Usas "tú" (tuteo), no "usted"
+- Respuestas MUY cortas (1-2 frases máximo, es una llamada real)
+- Suenas ocupada pero amable, como si estuvieras entre reuniones
+- Nunca suenas como un robot ni usas frases genéricas
+- Usas pausas naturales con "..." cuando piensas
+- Dices "vale", "genial", "perfecto" de forma natural
 
-SERVICIOS QUE OFRECES:
-- Contratos de luz y gas
-- Asesoramiento energético
-- Revisión de facturas para optimizar costes
-- Cambio de comercializadora
-- Tarifas personalizadas para hogares y empresas
+OBJETIVO DE LA LLAMADA:
+1. Confirmar que hablas con la persona correcta
+2. Hacer rapport preguntando de qué ciudad es
+3. Calificar: ¿Es titular? ¿Tiene la factura? ¿Le interesa revisar el ahorro?
+4. Conseguir que envíe la factura por WhatsApp
 
-OBJETIVO:
-- Atender consultas de clientes
-- Captar interés de potenciales clientes
-- Si el cliente está interesado, ofrecer que un asesor le llame
-- Recoger datos de contacto si el cliente quiere más información
+FLUJO DE CALIFICACIÓN (3 preguntas clave):
+1. "¿Eres el titular del contrato de luz?"
+2. "¿Tienes ahora la factura a mano, en papel o en el móvil?"
+3. "¿Te interesaría revisar si puedes ahorrar algo este mes... o preferirías dejarlo así?"
 
-INFORMACIÓN QUE PUEDES PEDIR:
-- Nombre completo
-- Teléfono de contacto
-- Mejor horario para llamar
-- Tipo de cliente (particular o empresa)
-- Consumo aproximado (si lo sabe)
+SI ACEPTA AL FINAL:
+"Perfecto. Te mando un WhatsApp ahora mismo. Envíame por ahí una foto de tu factura, y en cuanto la revisemos te llamamos con el ahorro exacto. Gracias por tu tiempo."
 
-LIMITACIONES:
-- NO puedes dar precios exactos por teléfono (depende del consumo)
-- NO puedes firmar contratos por teléfono
-- Para consultas específicas de facturas, deriva a un asesor
+MANEJO DE OBJECIONES:
 
-IMPORTANTE: Respuestas MUY cortas, máximo 2-3 frases. Es una llamada telefónica.`;
+Si pregunta "¿Quién eres?" o "¿Esto qué es?":
+"Claro, soy Cristina, del departamento de energía. Estamos revisando contratos de luz para ver si este mes puedes pagar menos. No te quito mucho tiempo."
+
+Si pregunta "¿Cuánto cuesta esto?":
+"Buena pregunta. La revisión no tiene ningún coste. Si vemos que puedes ahorrar algo, ya te lo explica un agente. Si no, te lo decimos igual y listo."
+
+Si dice "No quiero cambiar de compañía":
+"Perfecto, no hace falta cambiar nada todavía. Solo revisamos si estás pagando de más. ¿Sería una locura revisar si puedes ahorrar... o lo dejamos así?"
+
+Si dice "Mándame info por WhatsApp":
+"Claro. De hecho la mejor info es tu propia factura, así vemos si este mes puedes ahorrar. ¿Sería descabellado que me la mandaras y vemos si realmente te conviene... o lo descartamos?"
+
+Si dice "No tengo tiempo":
+"Sin problema. Te mando un WhatsApp y me la envías cuando tengas un minuto."
+
+Si NO es el titular:
+"Vale, perfecto. Para hacer la revisión necesitamos hablar con el titular. ¿Quieres que le enviemos un WhatsApp para que pueda mandarnos la factura... o lo dejamos así?"
+
+Si NO tiene la factura:
+"No pasa nada, te envío un WhatsApp ahora. Cuando tengas un minuto me mandas la foto por ahí, ¿vale?"
+
+Si muestra desconfianza:
+"Lo entiendo totalmente. Por eso solo revisamos tu factura y te devolvemos el ahorro exacto. Si no te convence, lo dejas ahí, sin compromiso."
+
+REGLAS IMPORTANTES:
+- NUNCA digas "gratis", di "sin coste" o "sin compromiso"
+- NUNCA hagas más de una pregunta por respuesta
+- NUNCA des explicaciones largas
+- Si el cliente dice algo positivo, avanza al siguiente paso
+- Si dice algo negativo, usa preguntas orientadas al NO ("¿lo dejamos así?")
+- Cuando termines la calificación, SIEMPRE cierra con el WhatsApp
+- Si se despide, despídete cordialmente: "Genial, cualquier cosa estoy por aquí. ¡Hasta luego!"
+
+RECUERDA: Eres humana, no un bot. Habla como hablaría una comercial real entre reuniones.`;
 
 // Historial de conversación por llamada
 const conversationHistory: Map<string, Array<{role: string, content: string}>> = new Map();
@@ -60,17 +87,27 @@ export async function POST(request: Request) {
 
     if (!speechResult) {
       return generateTwimlResponse(
-        'Disculpe, no le he escuchado bien. ¿Podría repetirlo?',
+        '¿Perdona? No te he escuchado bien.',
         baseUrl,
         false
       );
     }
 
-    // Detectar si quiere terminar la llamada
-    const endCallPhrases = ['adiós', 'adios', 'hasta luego', 'chao', 'bye', 'nada más', 'nada mas', 'eso es todo', 'gracias nada más'];
-    if (endCallPhrases.some(phrase => speechResult.toLowerCase().includes(phrase))) {
+    // Detectar despedida
+    const endCallPhrases = ['adiós', 'adios', 'hasta luego', 'chao', 'bye', 'nada más', 'nada mas', 'eso es todo', 'no gracias', 'no me interesa', 'dejalo', 'déjalo'];
+    const isEndCall = endCallPhrases.some(phrase => speechResult.toLowerCase().includes(phrase));
+
+    if (isEndCall && speechResult.toLowerCase().includes('no')) {
       return generateTwimlResponse(
-        'Perfecto. Gracias por llamar a Calidad Energía. Si necesita algo más, no dude en contactarnos. ¡Que tenga un buen día!',
+        'Vale, sin problema. Cuando quieras revisarlo, estoy por aquí. ¡Hasta luego!',
+        baseUrl,
+        true
+      );
+    }
+
+    if (isEndCall) {
+      return generateTwimlResponse(
+        'Genial, cualquier cosa estoy por aquí. ¡Hasta luego!',
         baseUrl,
         true
       );
@@ -82,16 +119,16 @@ export async function POST(request: Request) {
 
     // Generar respuesta con OpenAI
     const completion = await openai.chat.completions.create({
-      model: 'gpt-4-turbo-preview',
+      model: 'gpt-4o',
       messages: [
         { role: 'system', content: SYSTEM_PROMPT },
         ...history.map(h => ({ role: h.role as 'user' | 'assistant', content: h.content }))
       ],
-      max_tokens: 150,
-      temperature: 0.7,
+      max_tokens: 100,
+      temperature: 0.8,
     });
 
-    const assistantResponse = completion.choices[0].message.content || 'Disculpe, no he podido procesar su consulta.';
+    const assistantResponse = completion.choices[0].message.content || 'Perdona, no te he pillado. ¿Puedes repetir?';
 
     console.log(`[Voice] Respuesta: "${assistantResponse}"`);
 
@@ -105,13 +142,16 @@ export async function POST(request: Request) {
       if (firstKey) conversationHistory.delete(firstKey);
     }
 
-    return generateTwimlResponse(assistantResponse, baseUrl, false);
+    // Detectar si es cierre (mención de WhatsApp)
+    const isClosing = assistantResponse.toLowerCase().includes('whatsapp') && assistantResponse.toLowerCase().includes('foto');
+
+    return generateTwimlResponse(assistantResponse, baseUrl, isClosing);
 
   } catch (error) {
     console.error('[Voice] Error:', error);
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://ruben-callcenter.vercel.app';
     return generateTwimlResponse(
-      'Disculpe, he tenido un problema técnico. ¿Podría repetir su consulta?',
+      'Perdona, se ha cortado un momento. ¿Puedes repetir?',
       baseUrl,
       false
     );
@@ -120,8 +160,6 @@ export async function POST(request: Request) {
 
 function generateTwimlResponse(message: string, baseUrl: string, endCall: boolean): NextResponse {
   const audioUrl = getTtsUrl(message, baseUrl);
-  const followUpUrl = getTtsUrl('¿Algo más en lo que pueda ayudarle?', baseUrl);
-  const timeoutUrl = getTtsUrl('No le he escuchado. Gracias por llamar a Calidad Energía. ¡Hasta luego!', baseUrl);
 
   let twiml: string;
 
@@ -129,16 +167,20 @@ function generateTwimlResponse(message: string, baseUrl: string, endCall: boolea
     twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
   <Play>${audioUrl}</Play>
+  <Pause length="1"/>
   <Hangup/>
 </Response>`;
   } else {
     twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
   <Play>${audioUrl}</Play>
-  <Gather input="speech" language="es-ES" speechTimeout="auto" action="${baseUrl}/api/voice/respond" method="POST">
-    <Play>${followUpUrl}</Play>
+  <Gather input="speech" language="es-ES" speechTimeout="3" timeout="10" action="${baseUrl}/api/voice/respond" method="POST">
   </Gather>
-  <Play>${timeoutUrl}</Play>
+  <Play>${getTtsUrl('¿Sigues ahí?', baseUrl)}</Play>
+  <Gather input="speech" language="es-ES" speechTimeout="3" timeout="5" action="${baseUrl}/api/voice/respond" method="POST">
+  </Gather>
+  <Play>${getTtsUrl('Vale, te llamo en otro momento. ¡Hasta luego!', baseUrl)}</Play>
+  <Hangup/>
 </Response>`;
   }
 
@@ -152,6 +194,6 @@ function generateTwimlResponse(message: string, baseUrl: string, endCall: boolea
 export async function GET() {
   return NextResponse.json({
     status: 'ok',
-    endpoint: 'Calidad Energia Voice - Response Handler (ElevenLabs)'
+    endpoint: 'Calidad Energia Voice - Cristina Agent'
   });
 }

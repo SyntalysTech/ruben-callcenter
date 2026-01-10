@@ -4,34 +4,33 @@ function getTtsUrl(text: string, baseUrl: string): string {
   return `${baseUrl}/api/voice/tts?text=${encodeURIComponent(text)}`;
 }
 
-// Script para llamadas salientes a leads
+// Script profesional de llamada saliente (estilo Jeremy Miner / Cole Gordon)
+function generateGreeting(leadName?: string): string {
+  if (leadName) {
+    return `¡${leadName}! ¿${leadName}? Sí, mira, soy Cristina, del departamento de energía. Estoy entre reuniones y tengo literalmente treinta segunditos... Solo te llamaba porque estamos revisando facturas de luz, y acabamos de ayudar a varios clientes a ahorrar unos cuarenta o cincuenta euros al mes. ¿Sería una locura ver si podemos hacer algo parecido contigo... o lo descartamos por completo?`;
+  }
+  return `¡Hola! Soy Cristina, del departamento de energía. Estoy entre reuniones y tengo literalmente treinta segunditos... Solo te llamaba porque estamos revisando facturas de luz, y acabamos de ayudar a varios clientes a ahorrar unos cuarenta o cincuenta euros al mes. ¿Sería una locura ver si podemos hacer algo parecido contigo... o lo descartamos por completo?`;
+}
+
 export async function POST(request: Request) {
   const url = new URL(request.url);
   const leadName = url.searchParams.get('name') || '';
   const customMessage = url.searchParams.get('message') || '';
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://ruben-callcenter.vercel.app';
 
-  // Saludo personalizado para llamada saliente
-  let greeting: string;
-
-  if (customMessage) {
-    greeting = customMessage;
-  } else if (leadName) {
-    greeting = `Hola, ¿hablo con ${leadName}? Le llamo de Calidad Energía. ¿Tiene un momento para hablar sobre cómo podemos ayudarle a ahorrar en su factura de luz?`;
-  } else {
-    greeting = `Hola, le llamo de Calidad Energía. ¿Tiene un momento para hablar sobre cómo podemos ayudarle a ahorrar en su factura de luz?`;
-  }
-
-  const listeningMsg = `Le escucho.`;
-  const noResponseMsg = `Parece que no hay respuesta. Le volveremos a llamar en otro momento. ¡Hasta luego!`;
+  // Usar mensaje personalizado si existe, si no usar el script profesional
+  const greeting = customMessage || generateGreeting(leadName || undefined);
 
   const twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
   <Play>${getTtsUrl(greeting, baseUrl)}</Play>
-  <Gather input="speech" language="es-ES" speechTimeout="auto" action="${baseUrl}/api/voice/respond" method="POST">
-    <Play>${getTtsUrl(listeningMsg, baseUrl)}</Play>
+  <Gather input="speech" language="es-ES" speechTimeout="3" timeout="10" action="${baseUrl}/api/voice/respond" method="POST">
   </Gather>
-  <Play>${getTtsUrl(noResponseMsg, baseUrl)}</Play>
+  <Play>${getTtsUrl('¿Sigues ahí?', baseUrl)}</Play>
+  <Gather input="speech" language="es-ES" speechTimeout="3" timeout="5" action="${baseUrl}/api/voice/respond" method="POST">
+  </Gather>
+  <Play>${getTtsUrl('Vale, te llamo en otro momento. ¡Hasta luego!', baseUrl)}</Play>
+  <Hangup/>
 </Response>`;
 
   return new NextResponse(twiml, {
@@ -42,6 +41,5 @@ export async function POST(request: Request) {
 }
 
 export async function GET(request: Request) {
-  // También permitir GET para Twilio
   return POST(request);
 }
